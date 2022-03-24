@@ -4,12 +4,13 @@ import { EluiChinaAreaDht } from 'elui-china-area-dht'
 import moment from 'moment'
 import axios from "axios";
 import { toTypeString } from '@vue/shared';
+import { toRaw } from '@vue/reactivity'
+
 const chinaData = new EluiChinaAreaDht.ChinaArea().chinaAreaflat
+let pName;
 let cityName;
-let adName;
 const drawer2 = ref(false)
 onMounted(()=>{
-
     axios.get(
         "http://localhost:8080/listAllPoiType"
     ).then((res)=>{
@@ -38,8 +39,8 @@ const onSubmit = () => {
     let dueTime2 = timeValue.value[1]
     dueTime2.setMinutes(dueTime2.getMinutes() - dueTime2.getTimezoneOffset());
     axios.post("http://localhost:8080/generate",{
+    pname: pName.label,
     cityname: cityName.label,
-    adname : adName.label,
     starttime: dueTime.toJSON().substr(0, 19).replace(/[T]/g, ' '),
     endtime: dueTime2.toJSON().substr(0, 19).replace(/[T]/g, ' '),
     trajectorysize: TraNum.value,
@@ -52,9 +53,9 @@ const onSubmit = () => {
 const count = ref(0)
 
 function onCityChange(e) {
-    cityName = chinaData[e[0]]
-    adName = chinaData[e[1]]
-    console.log(cityName, adName)
+    pName = chinaData[e[0]]
+    cityName = chinaData[e[1]]
+    console.log(pName, cityName)
 }
 const timeValue = ref([
   new Date(2022, 10, 10, 10, 10),
@@ -108,90 +109,29 @@ const addDomain = () => {
                 maxage: 50,
                 minage: 20,
                 patternrate:1,
+                drivingrate:5,
+                genderrate:5,
             }
         },
         {
             workdayPattern:[
                 {
                     index:0,
+                    startTime:'',
+                    endTime: '',
                     value:"",
                     commute:""
                 },
-                                {
-                    index:1,
-                    value:"",
-                    commute:""
-                },
-                                {
-                    index:2,
-                    value:"",
-                    commute:""
-                },
-                                {
-                    index:3,
-                    value:"",
-                    commute:""
-                },
-                                {
-                    index:4,
-                    value:"",
-                    commute:""
-                },
-                                {
-                    index:5,
-                    value:"",
-                    commute:""
-                },                {
-                    index:6,
-                    value:"",
-                    commute:""
-                },
-                                {
-                    index:7,
-                    value:"",
-                    commute:""
-                }
             ]
         },{
             noworkdayPattern:[
                 {
                     index:0,
+                    startTime:'',
+                    endTime: '',
                     value:"",
                     commute:""
                 },
-                                {
-                    index:1,
-                    value:"",
-                    commute:""
-                },
-                                {
-                    index:2,
-                    value:"",
-                    commute:""
-                },
-                                {
-                    index:3,
-                    value:"",
-                    commute:""
-                },
-                                {
-                    index:4,
-                    value:"",
-                    commute:""
-                },
-                                {
-                    index:5,
-                    value:"",
-                    commute:""
-                },                {
-                    index:6,
-                    value:"",
-                    commute:""
-                },                {
-                    index:7,
-                    value:"",
-                    commute:""
-                }
             ]
         }
     ],
@@ -212,7 +152,26 @@ const openedPattern = reactive({
 })
 const options = [
 ]
-
+const addNewTimeInWorkingday = ()=>{
+  let leng = openedPattern.domain.pattern[1].workdayPattern.length
+  openedPattern.domain.pattern[1].workdayPattern.push({
+                    index:leng + 1,
+                    startTime:'',
+                    endTime: '',
+                    value:"",
+                    commute:""
+  })
+}
+const addNewTimeInNoWorkingday = (d)=>{
+  let leng = openedPattern.domain.pattern[2].noworkdayPattern.length
+  openedPattern.domain.pattern[2].noworkdayPattern.push({
+                    index:leng + 1,
+                    startTime:'',
+                    endTime: '',
+                    value:"",
+                    commute:""
+  })
+}
 const commuteOptions = [
     {
         value: '不限',
@@ -239,7 +198,9 @@ const commuteOptions = [
     title="pattern design"
     :direction="direction"
     :before-close="handleClose"
+    size="35%"
   >
+  Pattern attribute        <el-divider />
       <el-form-item label="Pattern Name">
         <el-input v-model="openedPattern.domain.pattern[0].attribute.patternname" placeholder="Please input" />
     </el-form-item>
@@ -249,23 +210,51 @@ const commuteOptions = [
     </el-form-item>
     <div class="slider-demo-block">
         <span class="demonstration">pattern rate</span>
-        <el-slider v-model="openedPattern.domain.pattern[0].attribute.patternrate" />
+        <el-slider v-model="openedPattern.domain.pattern[0].attribute.patternrate"/>
     </div>
-    <el-divider />
+        <div class="slider-demo-block">
+        <span class="demonstration">driving rate</span>
+        <el-slider v-model="openedPattern.domain.pattern[0].attribute.drivingrate" :max="10"/>
+    </div>
+    <div class="slider-demo-block">
+        <span class="demonstration">Gender distribution</span>
+        <el-slider v-model="openedPattern.domain.pattern[0].attribute.genderrate" :max="10"/>
+    </div>
+        <el-divider />
     work day
      <el-divider />
     <el-form-item
       v-for="(d ,index) in openedPattern.domain.pattern[1].workdayPattern"
       :key="d.key"
-      :label="'Hour ' + index"
-      :prop="'w.' + index + '.value'"
+      :label="'time quantum ' + (index + 1)"
     >
+    <el-space wrap>
+    <el-time-select
+      v-model="d.startTime"
+      :max-time="d.endTime"
+      class="mr-4"
+      style="width: 240px"
+      placeholder="Start time"
+      start="00:00"
+      step="01:00"
+      end="24:00"
+    />
+    <el-time-select
+      v-model="d.endTime"
+      :min-time="d.startTime"
+      style="width: 240px"
+      placeholder="End time"
+      start="00:00"
+      step="01:00"
+      end="24:00"
+    />
       <el-select
       v-model="d.value"
       multiple
       collapse-tags
-      placeholder="Select"
+      placeholder="Select POI Type"
       style="width: 240px"
+      size="large"
     >
     <el-option
         v-for="item in options"
@@ -276,8 +265,9 @@ const commuteOptions = [
     </el-select>
     <el-select
       v-model="d.commute"
-      placeholder="Select"
-      style="width: 120px"
+      placeholder="Select Max Commute Range"
+      style="width: 240px"
+      size="large"
     >
     <el-option
         v-for="item in commuteOptions"
@@ -286,21 +276,47 @@ const commuteOptions = [
         :value="item.value"
       />
     </el-select>
+
+    </el-space>
     </el-form-item>
-    noworkingday
+    <el-form-item>
+      <el-button align="center" color="#626aef" plain  @click="addNewTimeInWorkingday()">New</el-button>
+    </el-form-item>
+    no workingday
      <el-divider />
     <el-form-item
       v-for="(d ,index) in openedPattern.domain.pattern[2].noworkdayPattern"
       :key="d.key"
-      :label="'Hour ' + index"
+      :label="'time quantum ' + (index + 1)"
       :prop="'w.' + index + '.value'"
     >
-    <el-select
+    <el-space wrap>
+      <el-time-select
+      v-model="d.startTime"
+      :max-time="d.endTime"
+      class="mr-4"
+      style="width: 240px"
+      placeholder="Start time"
+      start="00:00"
+      step="01:00"
+      end="24:00"
+    />
+    <el-time-select
+      v-model="d.endTime"
+      :min-time="d.startTime"
+      style="width: 240px"
+      placeholder="End time"
+      start="00:00"
+      step="01:00"
+      end="24:00"
+    />
+      <el-select
       v-model="d.value"
       multiple
       collapse-tags
-      placeholder="Select"
+      placeholder="Select POI Type"
       style="width: 240px"
+      size="large"
     >
     <el-option
         v-for="item in options"
@@ -311,8 +327,9 @@ const commuteOptions = [
     </el-select>
     <el-select
       v-model="d.commute"
-      placeholder="Select"
-      style="width: 120px"
+      placeholder="Select Max Commute Range"
+      style="width: 240px"
+      size="large"
     >
     <el-option
         v-for="item in commuteOptions"
@@ -321,10 +338,14 @@ const commuteOptions = [
         :value="item.value"
       />
     </el-select>
+    </el-space>
+    </el-form-item>
+        <el-form-item>
+      <el-button align="center" color="#626aef" plain  @click="addNewTimeInNoWorkingday()">New</el-button>
     </el-form-item>
   </el-drawer>
     <el-form-item label="City Area">
-        <elui-china-area-dht isall :leave="3" @change="onCityChange"></elui-china-area-dht>  
+        <elui-china-area-dht isall :leave="2" @change="onCityChange"></elui-china-area-dht>  
     </el-form-item>
     <el-form-item label="Time interval">
             <el-date-picker
@@ -354,7 +375,6 @@ const commuteOptions = [
     </el-form-item>
     <el-form-item>
       <el-button type="primary" @click="onSubmit">Create</el-button>
-      <el-button>Cancel</el-button>
     </el-form-item>
   </el-form> 
 </template>
