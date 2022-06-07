@@ -41,6 +41,9 @@ const onSubmit = () => {
     axios.post("http://localhost:8080/generate",{
     pname: pName.label,
     cityname: cityName.label,
+    longcommuterange: longCommuteRange.value,
+    midcommuterange: midCommuteRange.value,
+    shortcommuterange: shortCommuteRange.value,
     starttime: dueTime.toJSON().substr(0, 19).replace(/[T]/g, ' '),
     endtime: dueTime2.toJSON().substr(0, 19).replace(/[T]/g, ' '),
     trajectorysize: TraNum.value,
@@ -51,6 +54,10 @@ const onSubmit = () => {
 }
 
 const count = ref(0)
+
+const longCommuteRange = ref(20000)
+const midCommuteRange = ref(8000)
+const shortCommuteRange = ref(3000)
 
 function onCityChange(e) {
     pName = chinaData[e[0]]
@@ -111,6 +118,8 @@ const addDomain = () => {
                 patternrate:1,
                 drivingrate:5,
                 genderrate:5,
+                vaccinerate:1,
+                maskrate:3,
             }
         },
         {
@@ -195,33 +204,42 @@ const commuteOptions = [
 <el-form :model="form" label-width="120px" size="large">
 <el-drawer
     v-model="drawer2"
-    title="pattern design"
+    title="Group Pattern"
     :direction="direction"
     :before-close="handleClose"
     size="35%"
   >
-  Pattern attribute        <el-divider />
-      <el-form-item label="Pattern Name">
+  Group attribute        <el-divider />
+      <el-form-item label="Group Pattern Name">
         <el-input v-model="openedPattern.domain.pattern[0].attribute.patternname" placeholder="Please input" />
     </el-form-item>
-    <el-form-item label="Age Range">
+    <el-form-item label="Age range">
       <el-input-number v-model="openedPattern.domain.pattern[0].attribute.minage" :min="1" :max="openedPattern.domain.pattern[0].attribute.maxAge" @change="handleNumberChange" />
-      <el-input-number v-model="openedPattern.domain.pattern[0].attribute.maxage" :min="1" :max="80" @change="handleNumberChange" />
+      <el-input-number v-model="openedPattern.domain.pattern[0].attribute.maxage" :min="1" :max="100" @change="handleNumberChange" />
     </el-form-item>
+
     <div class="slider-demo-block">
-        <span class="demonstration">pattern rate</span>
+        <span class="demonstration">Group probability</span>
         <el-slider v-model="openedPattern.domain.pattern[0].attribute.patternrate"/>
-    </div>
+    </div> 
+    <div class="slider-demo-block">
+        <span class="demonstration">Vaccination rate</span>
+        <el-slider v-model="openedPattern.domain.pattern[0].attribute.vaccinerate" :max="10"/>
+    </div>   
+    <div class="slider-demo-block">
+        <span class="demonstration">Mask rate</span>
+        <el-slider v-model="openedPattern.domain.pattern[0].attribute.maskrate" :max="10"/>
+    </div>   
         <div class="slider-demo-block">
-        <span class="demonstration">driving rate</span>
+        <span class="demonstration">Driving preference</span>
         <el-slider v-model="openedPattern.domain.pattern[0].attribute.drivingrate" :max="10"/>
     </div>
     <div class="slider-demo-block">
-        <span class="demonstration">Gender distribution</span>
+        <span class="demonstration">Gender distribution rate</span>
         <el-slider v-model="openedPattern.domain.pattern[0].attribute.genderrate" :max="10"/>
     </div>
         <el-divider />
-    work day
+    Working Day Schedule Template
      <el-divider />
     <el-form-item
       v-for="(d ,index) in openedPattern.domain.pattern[1].workdayPattern"
@@ -252,7 +270,7 @@ const commuteOptions = [
       v-model="d.value"
       multiple
       collapse-tags
-      placeholder="Select POI Type"
+      placeholder="Select POI categories"
       style="width: 240px"
       size="large"
     >
@@ -265,7 +283,7 @@ const commuteOptions = [
     </el-select>
     <el-select
       v-model="d.commute"
-      placeholder="Select Max Commute Range"
+      placeholder="Maximum travel distance"
       style="width: 240px"
       size="large"
     >
@@ -282,12 +300,12 @@ const commuteOptions = [
     <el-form-item>
       <el-button align="center" color="#626aef" plain  @click="addNewTimeInWorkingday()">New</el-button>
     </el-form-item>
-    no workingday
+    Non-working Day Schedule Template
      <el-divider />
     <el-form-item
       v-for="(d ,index) in openedPattern.domain.pattern[2].noworkdayPattern"
       :key="d.key"
-      :label="'time quantum ' + (index + 1)"
+      :label="'time quantums' + (index + 1)"
       :prop="'w.' + index + '.value'"
     >
     <el-space wrap>
@@ -314,7 +332,7 @@ const commuteOptions = [
       v-model="d.value"
       multiple
       collapse-tags
-      placeholder="Select POI Type"
+      placeholder="Select POI categories"
       style="width: 240px"
       size="large"
     >
@@ -327,7 +345,7 @@ const commuteOptions = [
     </el-select>
     <el-select
       v-model="d.commute"
-      placeholder="Select Max Commute Range"
+      placeholder="Maximum travel distance"
       style="width: 240px"
       size="large"
     >
@@ -356,14 +374,21 @@ const commuteOptions = [
             end-placeholder="End date"
             />
     </el-form-item >   
-    <el-form-item label="Trajectory ">
-      <el-input-number v-model="TraNum" :min="1" :max="50" @change="handleNumberChange" />
+    <el-form-item label="Trajectories number">
+      <el-input-number v-model="TraNum" :min="1" :max="2000" @change="handleNumberChange" />
     </el-form-item>
 
+    <el-form-item label="Maximum travel distance(3 levels)">
+      <el-space wrap size="small">
+        <el-input-number v-model="longCommuteRange" class="mx-4" size="small"/>
+        <el-input-number v-model="midCommuteRange" class="mx-4" size="small"/>
+        <el-input-number v-model="shortCommuteRange" class="mx-4" size="small"/>
+      </el-space>
+    </el-form-item>
     <el-form-item
       v-for="(domain, index) in dynamicValidateForm.domains"
       :key="domain.key"
-      :label="'pattern ' + index"
+      :label="'group ' + index"
       :prop="'domains.' + index + '.value'"
     >
       <el-button type="primary" size="large" style="margin-left: 16px" @click="openDrawer(domain)">
@@ -371,10 +396,10 @@ const commuteOptions = [
   </el-button>
     </el-form-item>
     <el-form-item>
-        <el-button @click="addDomain">New Pattern</el-button>
+        <el-button @click="addDomain">New Group</el-button>
     </el-form-item>
     <el-form-item>
-      <el-button type="primary" @click="onSubmit">Create</el-button>
+      <el-button type="primary" @click="onSubmit">Generate</el-button>
     </el-form-item>
   </el-form> 
 </template>

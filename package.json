@@ -9,11 +9,13 @@
   },
   "dependencies": {
     "@amap/amap-jsapi-loader": "^1.0.1",
+    "@arcgis/core": "^4.23.7",
     "@element-plus/icons-vue": "^1.1.4",
     "axios": "^0.26.1",
     "element-china-area-data": "^5.0.2",
     "element-plus": "^2.1.4",
     "elui-china-area-dht": "^2.0.0",
+    "esri-loader": "^3.5.0",
     "moment": "^2.29.1",
     "vue": "^3.2.25"
   },
